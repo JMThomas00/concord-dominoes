@@ -2,11 +2,14 @@ package game
 
 import (
 	"fmt"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/JMThomas00/Concord/sdk/arcade"
 	"github.com/JMThomas00/Concord/sdk/table"
+	"github.com/JMThomas00/concord-dominoes/engine"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -15,15 +18,17 @@ import (
 type Board struct {
 	seat          *table.Seat
 	sel           int
-	end           byte
+	end           int // the engine's end: East, West, North or South
 	width, height int
 	err           string
 
 	callout   string // KNOCK!, for a moment
 	calloutAt time.Time
+	scored    int // the last play's count of fives, in lights for a moment
+	scoredAt  time.Time
 }
 
-func newBoard(s *table.Seat) *Board { return &Board{seat: s, end: 'R'} }
+func newBoard(s *table.Seat) *Board { return &Board{seat: s} }
 
 func (b *Board) game() *Game   { return b.seat.Game().(*Game) }
 func (b *Board) Init() tea.Cmd { return nil }
@@ -44,18 +49,22 @@ func (b *Board) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case table.ChangedMsg:
 		b.err = ""
 		g := b.game()
-		if msg.Move == "knock" {
+		switch {
+		case g.Last.Kind == "knock", g.Last.Kind == "pass":
 			b.callout, b.calloutAt = "KNOCK!", time.Now()
+		case g.Last.Scored > 0 && !g.Over:
+			b.scored, b.scoredAt = g.Last.Scored, time.Now()
 		}
-		b.fix(g)
+		b.fix(g, true)
 	case tea.KeyMsg:
 		b.key(msg.String())
 	}
 	return b, nil
 }
 
-// fix keeps the pick in the hand, on a tile that fits, aimed at an end it fits.
-func (b *Board) fix(g *Game) {
+// fix keeps the pick in the hand (on a tile that fits, when moving to it is
+// wanted) and aimed at an end it fits, preferring one that scores.
+func (b *Board) fix(g *Game, seek bool) {
 	me := b.me()
 	if me < 0 {
 		return
@@ -66,21 +75,25 @@ func (b *Board) fix(g *Game) {
 		return
 	}
 	b.sel = min(b.sel, len(hand)-1)
-	if b.seat.MyTurn() && !g.Fits(hand[b.sel]) {
+	if seek && b.seat.MyTurn() && !g.Playable(hand[b.sel]) {
 		for i, t := range hand {
-			if g.Fits(t) {
+			if g.Playable(t) {
 				b.sel = i
 				break
 			}
 		}
 	}
-	t := hand[b.sel]
-	if b.end == 'L' && !g.FitsLeft(t) {
-		b.end = 'R'
+	ends := g.EndsFor(hand[b.sel])
+	if len(ends) == 0 || slices.Contains(ends, b.end) {
+		return
 	}
-	if b.end == 'R' && !g.FitsRight(t) && g.FitsLeft(t) {
-		b.end = 'L'
+	t, best := hand[b.sel], ends[0]
+	for _, e := range ends {
+		if engine.Points(g.Line.With(t, e).Count()) > engine.Points(g.Line.With(t, best).Count()) {
+			best = e
+		}
 	}
+	b.end = best
 }
 
 func (b *Board) key(k string) {
@@ -91,19 +104,24 @@ func (b *Board) key(k string) {
 	b.err = ""
 	hand := g.Hands[me]
 	switch k {
-	case "left", "h":
+	case "left", "h", "right", "l":
 		if len(hand) > 0 {
-			b.sel = (b.sel + len(hand) - 1) % len(hand)
+			d := 1
+			if k == "left" || k == "h" {
+				d = len(hand) - 1
+			}
+			b.sel = (b.sel + d) % len(hand)
 		}
-		b.fix2(g)
-	case "right", "l":
-		if len(hand) > 0 {
-			b.sel = (b.sel + 1) % len(hand)
-		}
-		b.fix2(g)
+		b.fix(g, false)
 	case "up", "down":
-		if b.sel < len(hand) && g.FitsLeft(hand[b.sel]) && g.FitsRight(hand[b.sel]) {
-			b.end = map[byte]byte{'L': 'R', 'R': 'L'}[b.end]
+		if b.sel < len(hand) {
+			if ends := g.EndsFor(hand[b.sel]); len(ends) > 1 {
+				d := 1
+				if k == "up" {
+					d = len(ends) - 1
+				}
+				b.end = ends[(max(0, slices.Index(ends, b.end))+d)%len(ends)]
+			}
 		}
 	case "enter", " ":
 		switch {
@@ -112,10 +130,9 @@ func (b *Board) key(k string) {
 		case g.Between():
 			b.play("next")
 		case b.sel < len(hand):
-			t := hand[b.sel]
-			move := t.String()
-			if len(g.Line) > 0 {
-				move += string(b.end)
+			move := hand[b.sel].String()
+			if g.Line.Started && g.Playable(hand[b.sel]) {
+				move += engine.EndNames[b.end : b.end+1]
 			}
 			b.play(move)
 		}
@@ -123,21 +140,6 @@ func (b *Board) key(k string) {
 		b.play("draw")
 	case "k", "K":
 		b.play("knock")
-	}
-}
-
-// fix2 aims a newly picked tile at an end it fits, without moving the pick.
-func (b *Board) fix2(g *Game) {
-	me := b.me()
-	if me < 0 || b.sel >= len(g.Hands[me]) {
-		return
-	}
-	t := g.Hands[me][b.sel]
-	if b.end == 'L' && !g.FitsLeft(t) {
-		b.end = 'R'
-	}
-	if b.end == 'R' && !g.FitsRight(t) && g.FitsLeft(t) {
-		b.end = 'L'
 	}
 }
 
@@ -176,9 +178,22 @@ func (b *Board) look() look {
 
 // Draw draws the table in the space it's given (table.ArcadeBoard).
 func (b *Board) Draw(c *arcade.Canvas, x, y, w, h int) {
-	drawGame(c, x, y, w, h, b.game(), b.look())
-	if b.Animating() && !b.game().Between() { // the hand-over says how the hand ended
-		drawCallout(c, b.callout, x+w/2, y+h/2-3)
+	g := b.game()
+	r := drawGame(c, x, y, w, h, g, b.look())
+	if g.Between() || b.seat.Effects() != "" {
+		return // the hand-over says how the hand ended
+	}
+	switch {
+	case b.callout != "" && time.Since(b.calloutAt) < 1200*time.Millisecond:
+		drawCallout(c, b.callout, r.x+r.w/2, r.y+r.h/2-2)
+	case b.scored > 0 && time.Since(b.scoredAt) < 1500*time.Millisecond:
+		// In the table's corner, so the line stays in sight (on a short
+		// table, just a badge).
+		if r.h >= 16 {
+			scorePop(c, b.scored, r.x+3+(4+5*len(strconv.Itoa(b.scored)))/2, r.y+1)
+		} else {
+			c.Text(r.x, r.y, " +"+strconv.Itoa(b.scored)+" ", "bg", "yellow", true)
+		}
 	}
 }
 
@@ -222,38 +237,51 @@ func (b *Board) Hint() string {
 	}
 	hand := g.Hands[me]
 	switch {
-	case len(g.Line) == 0 && g.Lead != nil:
+	case !g.Line.Started && g.Lead != nil:
 		return "lead with the " + g.Lead.String()
+	case g.Drawn != nil:
+		return "you drew the " + g.Drawn.String() + ": play it"
+	case !g.CanPlay(me) && len(g.Bone) > 0 && g.Drawing == engine.DrawOne:
+		return "nothing fits: D draws one"
 	case !g.CanPlay(me) && len(g.Bone) > 0:
 		return "nothing fits: D draws"
 	case !g.CanPlay(me):
 		return "nothing fits: K knocks"
-	case b.sel >= len(hand) || !g.Fits(hand[b.sel]):
+	case b.sel >= len(hand) || !g.Playable(hand[b.sel]):
 		return "that one doesn't fit · ←→ another"
 	}
 	t := hand[b.sel]
-	l, r := g.Ends()
-	if g.FitsLeft(t) && g.FitsRight(t) && len(g.Line) > 0 && l != r {
-		return "↑↓ which end · Enter plays the " + t.String()
+	if !g.Line.Started {
+		return "Enter leads the " + t.String()
 	}
-	return "Enter plays the " + t.String()
+	ends := g.EndsFor(t)
+	after := g.Line.With(t, b.end).Count()
+	hint := "Enter plays the " + t.String() + " · "
+	if p := engine.Points(after); p > 0 {
+		hint += fmt.Sprintf("scores %d!", p)
+	} else {
+		hint += fmt.Sprintf("the ends make %d", after)
+	}
+	if len(ends) > 1 {
+		hint = fmt.Sprintf("↑↓ which end (%d) · ", len(ends)) + hint
+	}
+	return hint
 }
 
-// Animating is true while a callout shows (table.Animator).
+// Animating is true while a callout or a count shows (table.Animator).
 func (b *Board) Animating() bool {
-	return b.callout != "" && b.seat.Effects() == "" && time.Since(b.calloutAt) < 1200*time.Millisecond
+	if b.seat.Effects() != "" {
+		return false
+	}
+	return (b.callout != "" && time.Since(b.calloutAt) < 1200*time.Millisecond) ||
+		(b.scored > 0 && time.Since(b.scoredAt) < 1500*time.Millisecond)
 }
 
 // ── The plain layout (small panes, standalone) ─────────────────────────────
 
 func (b *Board) View() string {
 	g, me := b.game(), b.me()
-	var out []string
-	var line []string
-	for _, p := range g.Line {
-		line = append(line, fmt.Sprintf("[%d|%d]", p.Left, p.Right))
-	}
-	out = append(out, "line: "+strings.Join(line, ""))
+	out := []string{"line: " + lineText(g.Line), fmt.Sprintf("ends: %d", g.Line.Count())}
 	if me >= 0 {
 		var hand []string
 		for i, t := range g.Hands[me] {
@@ -270,6 +298,30 @@ func (b *Board) View() string {
 	if status == "" {
 		status = b.Hint()
 	}
-	out = append(out, status)
-	return strings.Join(out, "\n")
+	return strings.Join(append(out, status), "\n")
+}
+
+// lineText writes the line as text: the west arm, the first tile, the east
+// arm, then the spinner's north and south arms.
+func lineText(l engine.Line) string {
+	if !l.Started {
+		return "(empty)"
+	}
+	var west []string
+	for _, k := range l.Arms[engine.West] {
+		west = append([]string{fmt.Sprintf("[%d|%d]", k.Far, k.Near)}, west...)
+	}
+	s := strings.Join(west, "") + fmt.Sprintf("[%d|%d]", l.West, l.East)
+	for _, k := range l.Arms[engine.East] {
+		s += fmt.Sprintf("[%d|%d]", k.Near, k.Far)
+	}
+	for _, e := range []int{engine.North, engine.South} {
+		if len(l.Arms[e]) > 0 {
+			s += "  " + engine.EndNames[e:e+1] + ":"
+			for _, k := range l.Arms[e] {
+				s += fmt.Sprintf("[%d|%d]", k.Near, k.Far)
+			}
+		}
+	}
+	return s
 }

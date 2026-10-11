@@ -1,14 +1,12 @@
 package engine
 
-import (
-	"math/rand/v2"
-	"strings"
-)
+import "math/rand/v2"
 
 // Best picks a move for the side to move, looking only at what that player
-// can see: their own hand and the line. level 1 plays any tile that fits;
-// 2 sheds its heaviest; 3 also keeps numbers it holds plenty of on the open
-// ends, so it can follow them.
+// can see: their own hand and the line. level 1 plays anything legal; 2
+// takes the play that scores most, then sheds its heaviest tile; 3 also
+// avoids leaving the next player an easy count, and keeps numbers it holds
+// plenty of on the open ends, so it can follow them.
 func Best(g *Game, level int) string {
 	moves := g.Moves()
 	if len(moves) == 1 || level <= 1 {
@@ -17,37 +15,38 @@ func Best(g *Game, level int) string {
 	seat := g.ToMove
 	best, bestScore := moves[0], -1<<30
 	for _, m := range moves {
-		t, ok := ParseTile(strings.TrimRight(m, "LR"))
+		t, end, ok := ParseMove(m)
 		if !ok {
 			continue
 		}
-		score := 10 * t.Pips()
+		after := g.Line.With(t, max(end, East))
+		score := 100*Points(after.Count()) + 10*t.Pips()
 		if t.Double() {
 			score += 25 // doubles are the hardest to place later
 		}
 		if level >= 3 {
-			// What end would this leave open, and how many of mine match it?
-			open := t.B
-			l, r := g.Ends()
-			switch {
-			case len(g.Line) == 0:
-				open = t.A
-			case strings.HasSuffix(m, "L"):
-				if t.A == l {
-					open = t.B
-				} else {
-					open = t.A
+			// What could the next player score off this? Assume any tile.
+			worst := 0
+			for e := East; e <= South; e++ {
+				v, open := after.End(e)
+				if !open {
+					continue
 				}
-			default:
-				if t.A == r {
-					open = t.B
-				} else {
-					open = t.A
+				for _, u := range Set() {
+					if u.Has(v) && u != t {
+						worst = max(worst, Points(after.With(u, e).Count()))
+					}
 				}
 			}
-			for _, h := range g.Hands[seat] {
-				if h != t && h.Has(open) {
-					score += 12
+			score -= 40 * worst
+			// And how many of mine match what this leaves open?
+			for e := East; e <= South; e++ {
+				if v, open := after.End(e); open {
+					for _, h := range g.Hands[seat] {
+						if h != t && h.Has(v) {
+							score += 12
+						}
+					}
 				}
 			}
 		}

@@ -3,7 +3,7 @@ module github.com/JMThomas00/concord-dominoes
 go 1.24.2
 
 require (
-	github.com/JMThomas00/Concord/sdk v0.15.1-0.20261011230358-8e0748e6d37d
+	github.com/JMThomas00/Concord/sdk v0.15.1-0.20261011235215-fb60845831ab
 	github.com/charmbracelet/bubbletea v1.3.4
 	github.com/google/uuid v1.6.0
 )

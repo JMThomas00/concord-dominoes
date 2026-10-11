@@ -6,7 +6,7 @@
 id = "concord-dominoes"
 name = "Dominoes"
 version = "0.1.0"            # release.go stamps the git tag here
-description = "Dominoes for two to four: people, the computer, or both, to a target score."
+description = "All Fives dominoes for two to four: people, the computer, or both, to a target score."
 source_url = "https://github.com/JMThomas00/concord-dominoes"
 
 [process]
@@ -95,9 +95,9 @@ icon = "🔥"
 
 # Dominoes' own (game/game.go, awards).
 [[achievement]]
-id = "capicua"
-name = "Capicúa"
-description = "Go out with a tile that fits both ends, and win the game"
+id = "big_play"
+name = "Count It Up"
+description = "Score 20 or more with a single tile, and win the game"
 tier = "gold"
 
 [[achievement]]

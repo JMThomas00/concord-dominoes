@@ -1,5 +1,7 @@
 github.com/JMThomas00/Concord/sdk v0.15.1-0.20261011230358-8e0748e6d37d h1:L5pJkiIsJ6A9FnfpIApXRj0+rw4kD5ei9DRPpsr0QAg=
 github.com/JMThomas00/Concord/sdk v0.15.1-0.20261011230358-8e0748e6d37d/go.mod h1:hJyvQwgoXihZyKbGDb9XgPkWZ5gpu02dFY75NH6J1TA=
+github.com/JMThomas00/Concord/sdk v0.15.1-0.20261011235215-fb60845831ab h1:MFSB7rzp+CYfI8oKuKoVep9r4O2CKYwBKyaOCqzjXLk=
+github.com/JMThomas00/Concord/sdk v0.15.1-0.20261011235215-fb60845831ab/go.mod h1:hJyvQwgoXihZyKbGDb9XgPkWZ5gpu02dFY75NH6J1TA=
 github.com/atotto/clipboard v0.1.4 h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=
 github.com/atotto/clipboard v0.1.4/go.mod h1:ZY9tmq7sm5xIbd9bOK4onWV4S6X0u6GY7Vn0Yu86PYI=
 github.com/aymanbagabas/go-osc52/v2 v2.0.1 h1:HwpRHbFMcZLEVr42D4p7XBqjyuxQH5SMiErDT4WkJ2k=

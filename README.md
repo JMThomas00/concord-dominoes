@@ -2,10 +2,10 @@
 
 Dominoes for the terminal and for
 [Concord](https://github.com/JMThomas00/Concord) channels, from the same
-program: two to four players, people or the computer, to a target score. In
-Concord it's a card table on **THE FRONT PORCH**: tiles slapped down, a
-**KNOCK!** when you pass, **DOMINO!** when you go out (**CAPICUA!** when your
-last tile fits both ends), **BLOCKED!** when nobody can play, chiptune sounds,
+program: All Fives for two to four players, people or the computer, to a
+target score. In Concord it's a card table on **THE FRONT PORCH**: tiles
+slapped down, a count of fives in lights, a **KNOCK!** when you pass,
+**DOMINO!** when you go out, **BLOCKED!** when nobody can play, chiptune sounds,
 a Hall of Fame, and **Bottle Caps** to spend at **THE CORNER STORE** on tile
 sets and tables.
 
@@ -61,21 +61,34 @@ Everyone who opens the channel starts on the title screen. The menu:
 **Whoever starts a game sets it up on the NEW GAME screen:** how many play (2,
 3 or 4), what fills each other seat (the computer at easy, normal or hard, or a
 person, where people can sit down: a seats channel's table), **partners**
-(four players, across the table, scoring together), and the length: **SHORT
-50**, **MEDIUM 100** or **LONG 250** points. The table grows with the window: a
-big pane gets tiles with pips, a small one numbers.
+(four players, across the table, scoring together), **drawing** (with two or
+three: keep drawing until a tile fits, or draw one and pass if it doesn't), and
+the length: **SHORT 100**, **MEDIUM 150** or **LONG 250** points. The table
+grows with the window: a big pane gets your hand with pips, a small one numbers.
+The line on the table is always numbers, so it can branch four ways and turn
+at the edges.
 
 To update later: select it in **Server Settings → Plugins**, press **U**, then
 Enter. A failed update rolls back by itself.
 
 ## Rules
 
-A double-six set. Everyone takes seven tiles; the rest is the boneyard (none
-with four players). In turn, play a tile matching an open end of the line, or
-draw from the boneyard until one fits, or knock (pass) when it's empty. Going
-out scores the pips left in the other hands (the other team's, with partners);
-if nobody can play, the lightest hand wins them. The highest double leads the
-first hand, the last winner the rest. First to the target wins.
+All Fives (also called Muggins), with a double-six set. Everyone takes seven
+tiles; the rest is the boneyard (none with four players). In turn, play a tile
+matching an open end of the line. The first double played is the **spinner**:
+once both its sides are covered, the line can grow off its other two sides as
+well, so there can be four open ends.
+
+After every play, add up the open ends (a double at an end counts both halves;
+so does the spinner while one of its sides is bare). A multiple of five scores
+that many points at once: ends of 6, 4 and 5 score 15.
+
+Nothing fits? Draw from the boneyard (until one fits, or just one, by the
+game's drawing rule), and knock (pass) when it's empty. Going out scores the
+pips left in the other hands (the other team's, with partners), rounded to the
+nearest five; if nobody can play, the lightest hand wins them. The highest
+double leads the first hand, the last winner the rest. The first to the target
+wins, even in the middle of a hand.
 
 **Keys:** ←→ pick a tile, ↑↓ pick the end, Enter plays, D draws, K knocks.
 

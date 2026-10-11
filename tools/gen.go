@@ -1,7 +1,7 @@
 //go:build ignore
 
 // gen writes the dominoes sounds into client/sounds: its own (a tile slapped
-// down, a knock on the table, tiles drawn, a hand won) and the Concord Arcade
+// down, a knock on the table, tiles drawn, a count of fives, a hand won) and the Concord Arcade
 // kit. Run from the repo root: go run tools/gen.go
 package main
 
@@ -46,6 +46,15 @@ func main() {
 		for i, f := range []float64{523.25, 659.25, 783.99} {
 			if s := t - float64(i)*.1; s >= 0 {
 				v += .22 * math.Tanh(3*math.Sin(2*math.Pi*f*s)) * math.Exp(-s*7)
+			}
+		}
+		return v
+	})
+	sound("five.wav", .4, func(t float64) float64 { // a count of fives: a quick bright arpeggio
+		v := 0.0
+		for i, f := range []float64{783.99, 1174.66, 1567.98} {
+			if s := t - float64(i)*.06; s >= 0 {
+				v += .2 * math.Tanh(2.5*math.Sin(2*math.Pi*f*s)) * math.Exp(-s*12)
 			}
 		}
 		return v

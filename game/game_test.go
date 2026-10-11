@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -38,13 +39,13 @@ func startServer(t *testing.T) (*plugintest.Server, uuid.UUID) {
 
 func TestOptions(t *testing.T) {
 	g := New(map[string]string{table.OptionPlayers: "3", OptionTarget: "long", table.OptionSeed: "9"})
-	if g.N != 3 || g.Target != 250 || g.Partners || g.Seed != 9 {
+	if g.N != 3 || g.Target != 250 || g.Partners || g.Seed != 9 || g.Drawing != engine.DrawUntil {
 		t.Fatalf("game %+v", g.Game)
 	}
 	if g := New(map[string]string{table.OptionPlayers: "3", OptionPartners: "yes"}); g.Partners {
 		t.Fatal("partners with three")
 	}
-	if g := New(map[string]string{OptionPartners: "yes"}); g.N != 4 || !g.Partners || g.Target != 100 {
+	if g := New(map[string]string{OptionPartners: "yes", OptionDrawing: "one"}); g.N != 4 || !g.Partners || g.Target != 150 || g.Drawing != engine.DrawOne {
 		t.Fatalf("defaults: %d players, partners %v, to %d", g.N, g.Partners, g.Target)
 	}
 }
@@ -116,7 +117,7 @@ func TestDrawing(t *testing.T) {
 	for _, n := range []string{"2", "3", "4"} {
 		g := New(map[string]string{table.OptionPlayers: n, table.OptionSeed: "3"})
 		for i := 0; i < 12; i++ {
-			_ = g.Play(engine.Best(g.Game, 2))
+			_ = g.Play(engine.Best(g.Game, 3))
 		}
 		for _, numbers := range []bool{false, true} {
 			for _, area := range [][2]int{{118, 34}, {98, 30}, {82, 34}, {78, 18}, {42, 18}} {
@@ -169,14 +170,14 @@ func TestArcadeGame(t *testing.T) {
 	srv.FrameContaining(v, "THE CORNER STORE")
 	srv.Key(v, "enter") // 1 PLAYER VS CPU
 	frame := srv.FrameContaining(v, "◂ 4 PLAYERS ▸")
-	for _, want := range []string{"SEAT 4", "PARTNERS", "◂ MEDIUM · 100 ▸"} {
+	for _, want := range []string{"SEAT 4", "PARTNERS", "◂ MEDIUM · 150 ▸"} {
 		if !strings.Contains(frame, want) {
 			t.Fatalf("NEW GAME is missing %q:\n%s", want, frame)
 		}
 	}
 	srv.Key(v, "enter")
-	frame = srv.FrameContaining(v, "BONEYARD")
-	for _, want := range []string{"4 PLAYERS", "NONE: ALL DEALT", "SCORE", "EAST CPU"} {
+	frame = srv.FrameContaining(v, "THE ENDS")
+	for _, want := range []string{"4 PLAYERS", "NO BONEYARD", "SCORE", "EAST CPU"} {
 		if !strings.Contains(frame, want) {
 			t.Fatalf("the table is missing %q:\n%s", want, frame)
 		}
@@ -198,4 +199,53 @@ func TestArcadeGame(t *testing.T) {
 		srv.NextFrame(v)
 	}
 	t.Fatal("the hand never ended")
+}
+
+// The line stays on the table without tiles overlapping, through whole
+// hands, at the small and big table sizes.
+func TestLineLayout(t *testing.T) {
+	bad := 0
+	total := 0
+	for _, r := range []region{{0, 0, 80, 12}, {0, 0, 78, 22}} {
+		for seed := 1; seed <= 60; seed++ {
+			for _, n := range []string{"2", "3", "4"} {
+				g := New(map[string]string{table.OptionPlayers: n, table.OptionSeed: strconv.Itoa(seed)})
+				for i := 0; i < 400 && !g.Over && g.Hand < 3; i++ {
+					if g.Line.Started {
+						total++
+						lay := layOut(g.Line, r)
+						seen := map[[2]int]bool{}
+						clash := false
+						for _, p := range lay.tiles {
+							s := p.at
+							if s.x < r.x || s.y < r.y || s.x+s.w > r.x+r.w || s.y+s.h > r.y+r.h {
+								clash = true
+							}
+							for j := 0; j < s.h; j++ {
+								for k := 0; k < s.w; k++ {
+									if seen[[2]int{s.x + k, s.y + j}] {
+										clash = true
+									}
+									seen[[2]int{s.x + k, s.y + j}] = true
+								}
+							}
+						}
+						if clash {
+							bad++
+							if bad == 1 {
+								t.Logf("first clash: %dx%d, %d tiles: %s", r.w, r.h, g.Line.Len(), lineText(g.Line))
+							}
+						}
+					}
+					if err := g.Play(engine.Best(g.Game, 3)); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+		}
+	}
+	t.Logf("%d of %d lines didn't fit", bad, total)
+	if bad > 0 {
+		t.Fail()
+	}
 }

@@ -16,11 +16,12 @@ import (
 // Options on the NEW GAME screen, beyond the kit's own (how many play and
 // who fills each seat).
 const (
-	OptionTarget   = "target"   // "short" (50), "medium" (100) or "long" (250)
+	OptionTarget   = "target"   // "short" (100), "medium" (150) or "long" (250)
 	OptionPartners = "partners" // "yes": four players, partners across
+	OptionDrawing  = "drawing"  // "until" something fits, or "one" and pass
 )
 
-var targets = map[string]int{"short": 50, "medium": 100, "long": 250}
+var targets = map[string]int{"short": 100, "medium": 150, "long": 250}
 
 // Rules is dominoes for the table kit: two to four players.
 var Rules = table.Rules{
@@ -54,7 +55,7 @@ func computer(tg table.Game, level int) string {
 // achievements. Saved games are replays, so the counts are rebuilt on loading.
 type Game struct {
 	*engine.Game
-	Capicuas, Blocks, BigHand [4]int
+	BigPlay, Blocks, BigHand [4]int
 }
 
 // New starts a game with these options.
@@ -67,18 +68,18 @@ func New(options map[string]string) *Game {
 	if target == 0 {
 		target = targets["medium"]
 	}
-	return &Game{Game: engine.New(n, options[OptionPartners] == "yes", target, table.Seed(options))}
+	return &Game{Game: engine.New(n, options[OptionPartners] == "yes", target, options[OptionDrawing], table.Seed(options))}
 }
 
 func (g *Game) Play(move string) error {
 	if err := g.Game.Play(move); err != nil {
 		return err
 	}
+	if s := g.Last.Seat; g.Last.Scored > 0 {
+		g.BigPlay[s] = max(g.BigPlay[s], g.Last.Scored)
+	}
 	if e := g.Ended; g.Last.Ended && e != nil && e.Winner >= 0 {
-		switch e.Kind {
-		case "capicua":
-			g.Capicuas[e.Winner]++
-		case "blocked":
+		if e.Kind == "blocked" {
 			g.Blocks[e.Winner]++
 		}
 		g.BigHand[e.Winner] = max(g.BigHand[e.Winner], e.Points)
@@ -101,7 +102,9 @@ func sound(tg table.Game, move string) string {
 		return arcade.SoundFinish
 	case g.Last.Ended:
 		return "sounds/hand.wav"
-	case g.Last.Kind == "knock":
+	case g.Last.Scored > 0:
+		return "sounds/five.wav"
+	case g.Last.Kind == "knock", g.Last.Kind == "pass":
 		return "sounds/knock.wav"
 	case g.Last.Kind == "draw", g.Last.Kind == "next":
 		return "sounds/draw.wav"
@@ -117,8 +120,8 @@ func awards(tg table.Game, seat int, o table.Outcome) []string {
 		return nil
 	}
 	var out []string
-	if g.Capicuas[seat] > 0 {
-		out = append(out, "capicua")
+	if g.BigPlay[seat] >= 20 {
+		out = append(out, "big_play")
 	}
 	if g.BigHand[seat] >= 50 {
 		out = append(out, "big_hand")
