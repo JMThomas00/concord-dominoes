@@ -1,0 +1,129 @@
+# Concord reads this to install and run Dominoes. Admins never edit it:
+# the settings below appear as forms in Concord (the channel's own settings
+# for create_field).
+
+[plugin]
+id = "concord-dominoes"
+name = "Dominoes"
+version = "0.1.0"            # release.go stamps the git tag here
+description = "Dominoes for two to four: people, the computer, or both, to a target score."
+source_url = "https://github.com/JMThomas00/concord-dominoes"
+
+[process]
+restart_on_crash = true
+max_restarts = 5
+
+[process.entrypoint.linux]
+bin = "concord-dominoes"
+[process.entrypoint.darwin]
+bin = "concord-dominoes"
+[process.entrypoint.windows]
+bin = "concord-dominoes.exe"
+
+[[channel_kind]]
+kind = "table"
+display_name = "Dominoes Table"
+icon = "▮"
+remote_pane = true
+
+  # How people find opponents -- the table kit's seating modes.
+  [[channel_kind.create_field]]
+  key = "seating"
+  label = "Seating"
+  type = "select"
+  options = ["seats", "challenge", "private"]
+  default = "seats"
+  help = "seats: one table, sit down to play · challenge: invite members from a lobby · private: your own games with chosen opponents"
+
+  [[channel_kind.create_field]]
+  key = "allow_spectators"
+  label = "Allow spectators"
+  type = "boolean"
+  default = "true"
+  help = "Let members who aren't playing watch games"
+
+  [[channel_kind.create_field]]
+  key = "computer_opponent"
+  label = "Computer opponent"
+  type = "boolean"
+  default = "true"
+  help = "Let players play against the computer"
+
+  [[channel_kind.create_field]]
+  key = "computer_level"
+  label = "Computer strength"
+  type = "select"
+  options = ["easy", "normal", "hard"]
+  default = "normal"
+  help = "How well the computer plays"
+
+  # Players, seats, partners and the length are chosen for each game, on the
+  # arcade's NEW GAME screen.
+
+# Achievements and the leaderboard. The table kit keeps every player's
+# record and unlocks these for you; members see them on Settings > About
+# > Achievements.
+[[achievement]]
+id = "first_win"
+name = "First Victory"
+description = "Win a game"
+tier = "bronze"
+
+[[achievement]]
+id = "wins_10"
+name = "Seasoned Player"
+description = "Win ten games"
+tier = "silver"
+
+[[achievement]]
+id = "wins_50"
+name = "Grandmaster of the Vineyard"
+description = "Win fifty games"
+tier = "gold"
+
+[[achievement]]
+id = "beat_computer"
+name = "Beat the Machine"
+description = "Beat the computer"
+icon = "🤖"
+
+[[achievement]]
+id = "streak_5"
+name = "On a Roll"
+description = "Win five games in a row"
+icon = "🔥"
+
+# Dominoes' own (game/game.go, awards).
+[[achievement]]
+id = "capicua"
+name = "Capicúa"
+description = "Go out with a tile that fits both ends, and win the game"
+tier = "gold"
+
+[[achievement]]
+id = "big_hand"
+name = "Fifty in One"
+description = "Score 50 or more in a single hand, and win the game"
+tier = "silver"
+
+[[achievement]]
+id = "blocker"
+name = "Locked Up"
+description = "Win a blocked hand, and the game"
+tier = "bronze"
+
+[[achievement]]
+id = "long_game"
+name = "All Night Long"
+description = "Win a long game, to 250"
+tier = "silver"
+
+[[achievement]]
+id = "partners"
+name = "Across the Table"
+description = "Win a game with a partner"
+tier = "bronze"
+
+[leaderboard]
+stat = "wins"
+label = "Wins"
