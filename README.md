@@ -26,8 +26,11 @@ On macOS, if it's blocked as being from an unidentified developer, run
 installed:** `go install github.com/JMThomas00/concord-dominoes@latest`,
 then run `concord-dominoes`.
 
-It starts with a menu: play against the computer at three levels, three of it
-at the table with you.
+It opens on the arcade, as in Concord: play the computer at three levels,
+three of it at the table with you, or PASS AND PLAY with friends at one
+keyboard. Your record, unlockables and hall of fame are kept on this computer, and the
+sounds play from the `client` folder that comes in the zip: keep it next to
+the program. (Installed with `go install`, only the menu sounds play.)
 
 ## Play it on a Concord server
 
